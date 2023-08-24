@@ -1,29 +1,17 @@
-import fs from 'fs'
-import JoyCon from 'joycon'
-import { jsoncParse } from './utils'
+import { findConfig } from './findConfig'
+import type { CommonOptions } from 'esbuild'
 
-const joycon = new JoyCon()
+type EsbuildCompilerOptions = NonNullable<
+  Exclude<CommonOptions['tsconfigRaw'], string | undefined>['compilerOptions']
+>
 
-joycon.addLoader({
-  test: /\.json$/,
-  loadSync: (file) => {
-    const content = fs.readFileSync(file, 'utf8')
-    return jsoncParse(content)
-  },
-})
-
-export const getOptions = (
-  cwd: string,
-): { jsxFactory?: string; jsxFragment?: string; target?: string } => {
-  const { data, path } = joycon.loadSync(["tsconfig.json", "jsconfig.json"], cwd);
+export const getOptions = (cwd: string): EsbuildCompilerOptions => {
+  const { data, path } = findConfig(['tsconfig.json', 'jsconfig.json'], cwd)
 
   if (path && data) {
-    return {
-      jsxFactory: data.compilerOptions?.jsxFactory,
-      jsxFragment: data.compilerOptions?.jsxFragmentFactory,
-      target: data.compilerOptions?.target?.toLowerCase(),
-    }
+    return data.compilerOptions ?? {}
   }
+
   return {}
 }
 
@@ -37,8 +25,6 @@ export const inferPackageFormat = (
   if (filename.endsWith('.cjs')) {
     return 'cjs'
   }
-  const { data } = joycon.loadSync(['package.json'], cwd)
-  return data && data.type === 'module' && /\.m?js$/.test(filename)
-    ? 'esm'
-    : 'cjs'
+  const { data } = findConfig(['package.json'], cwd)
+  return data?.type === 'module' && /\.m?js$/.test(filename) ? 'esm' : 'cjs'
 }

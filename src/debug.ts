@@ -1,3 +1,3 @@
 import createDebug from 'debug'
 
-export const debug = createDebug('esbuild-register')
+export const debug = createDebug('esbin')

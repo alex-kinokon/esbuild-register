@@ -1,38 +1,16 @@
-import { dirname, extname, join } from 'path'
-import type { RawSourceMap } from 'source-map'
-import sourceMapSupport from 'source-map-support'
-import type { UrlAndMap } from 'source-map-support'
+import { dirname, extname } from 'node:path'
 import { transformSync, TransformOptions } from 'esbuild'
 import { addHook } from 'pirates'
-import fs from 'fs'
-import module from 'module'
-import process from 'process'
+import fs from 'node:fs'
+import { Module } from 'node:module'
 import { getOptions, inferPackageFormat } from './options'
-import { removeNodePrefix } from './utils'
 import { registerTsconfigPaths } from './tsconfig-paths'
 import { debug } from './debug'
 
 const IMPORT_META_URL_VARIABLE_NAME = '__esbuild_register_import_meta_url__'
-const map: { [file: string]: string | RawSourceMap } = {}
 
 function installSourceMapSupport() {
-  if ((process as any).setSourceMapsEnabled) {
-    ;(process as any).setSourceMapsEnabled(true)
-  } else {
-    sourceMapSupport.install({
-      handleUncaughtExceptions: false,
-      environment: 'node',
-      retrieveSourceMap(file) {
-        if (map[file]) {
-          return {
-            url: file,
-            map: map[file],
-          } as UrlAndMap
-        }
-        return null
-      },
-    })
-  }
+  ;(process as any).setSourceMapsEnabled(true)
 }
 
 type COMPILE = (
@@ -49,7 +27,7 @@ type COMPILE = (
  */
 function patchCommonJsLoader(compile: COMPILE) {
   // @ts-expect-error
-  const extensions = module.Module._extensions
+  const extensions = Module._extensions
   const jsHandler = extensions['.js']
 
   extensions['.js'] = function (module: any, filename: string) {
@@ -102,7 +80,7 @@ interface RegisterOptions extends TransformOptions {
   hookMatcher?(fileName: string): boolean
 }
 
-export function register(esbuildOptions: RegisterOptions = {}) {
+export function register(esbuildOptions: RegisterOptions = {}): Disposable {
   const {
     extensions = DEFAULT_EXTENSIONS,
     hookIgnoreNodeModules = true,
@@ -126,16 +104,14 @@ export function register(esbuildOptions: RegisterOptions = {}) {
     }
 
     const dir = dirname(filename)
-    const options = getOptions(dir)
+    const compilerOptions = getOptions(dir)
     format = format ?? inferPackageFormat(dir, filename)
 
     const result = transformSync(code, {
       sourcefile: filename,
       loader: getLoader(filename),
       sourcemap: 'both',
-      target: options.target,
-      jsxFactory: options.jsxFactory,
-      jsxFragment: options.jsxFragment,
+      tsconfigRaw: { compilerOptions },
       format,
       define,
       banner,
@@ -154,7 +130,7 @@ export function register(esbuildOptions: RegisterOptions = {}) {
       }
     }
     if (format === 'esm') return js
-    return removeNodePrefix(js)
+    return js
   }
 
   const revert = addHook(compile, {
@@ -168,7 +144,7 @@ export function register(esbuildOptions: RegisterOptions = {}) {
   const unregisterTsconfigPaths = registerTsconfigPaths()
 
   return {
-    unregister() {
+    [Symbol.dispose]() {
       revert()
       unpatchCommonJsLoader()
       unregisterTsconfigPaths()
