@@ -1,13 +1,13 @@
-import { builtinModules } from 'module'
+import { builtinModules } from 'node:module'
 import { loadConfig, createMatchPath } from 'tsconfig-paths'
 
-const noOp = () => {}
+const noop = () => {}
 
 export function registerTsconfigPaths(): () => void {
   const configLoaderResult = loadConfig(process.cwd())
 
   if (configLoaderResult.resultType === 'failed') {
-    return noOp
+    return noop
   }
 
   const matchPath = createMatchPath(

@@ -1,1 +1,6 @@
-"@egoist/prettier-config"
+{
+  "singleQuote": true,
+  "semi": false,
+  "trailingComma": "all",
+  "endOfLine": "lf"
+}

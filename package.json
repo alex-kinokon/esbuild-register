@@ -1,7 +1,7 @@
 {
-  "name": "esbuild-register",
-  "description": "Transpile JSX, TypeScript and esnext features on the fly with esbuild",
-  "version": "0.0.0",
+  "name": "esbin",
+  "description": "register for esbuild",
+  "version": "0.0.2",
   "main": "register.js",
   "license": "MIT",
   "files": [
@@ -9,38 +9,51 @@
     "/register.js",
     "/loader.js"
   ],
+  "repository": {
+    "url": "git@github.com:alex-kinokon/esbuild-register.git"
+  },
   "exports": {
-    ".": "./register.js",
+    ".": "./dist/node.js",
     "./loader": "./loader.js",
-    "./dist/node": "./dist/node.js",
-    "./dist/*": "./dist/*"
+    "./register": "./register.js"
+  },
+  "bin": {
+    "tsx": "./dist/bin.js"
   },
   "scripts": {
-    "build": "tsup src/node.ts src/loader.ts --dts",
+    "build": "tsup src/node.ts src/loader.ts --dts; tsup src/bin.ts src/prepare.ts",
     "test": "npm run build && node -r ./register.js tests/test.ts",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@egoist/prettier-config": "^0.1.0",
-    "@types/debug": "^4.1.7",
-    "@types/node": "^14.0.23",
-    "@types/source-map-support": "^0.5.3",
-    "esbuild": "0.15.13",
-    "execa": "^4.0.3",
-    "joycon": "^2.2.5",
-    "pirates": "^4.0.1",
-    "source-map": "0.7.3",
-    "source-map-support": "^0.5.19",
-    "strip-json-comments": "^4.0.0",
-    "tsconfig-paths": "^4.2.0",
-    "tsup": "^4.7.1",
-    "typescript": "^4.8.4",
-    "uvu": "0.5.2"
+    "@aet/eslint-rules": "0.0.1-beta.35",
+    "@egoist/prettier-config": "^1.0.0",
+    "@types/debug": "^4.1.8",
+    "@types/node": "^20.6.2",
+    "@types/source-map-support": "^0.5.7",
+    "esbuild": "0.19.3",
+    "execa": "^8.0.1",
+    "strip-json-comments": "^5.0.1",
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2",
+    "uvu": "0.5.6"
   },
   "peerDependencies": {
-    "esbuild": ">=0.12 <1"
+    "esbuild": ">=0.19 <1"
   },
   "dependencies": {
-    "debug": "^4.3.4"
+    "debug": "^4.3.4",
+    "pirates": "^4.0.6",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "upstream": {
+    "version": 1,
+    "sources": {
+      "main": {
+        "repository": "git@github.com:egoist/esbuild-register.git",
+        "commit": "4184f944da7bd6a654389c08e46be6d555da326b",
+        "branch": "dev"
+      }
+    }
   }
 }
