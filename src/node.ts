@@ -3,7 +3,7 @@ import { transformSync, TransformOptions } from 'esbuild'
 import { addHook } from 'pirates'
 import fs from 'node:fs'
 import { Module } from 'node:module'
-import { getOptions, inferPackageFormat } from './options'
+import { getEsbuildOptions, getOptions, inferPackageFormat } from './options'
 import { registerTsconfigPaths } from './tsconfig-paths'
 import { debug } from './debug'
 
@@ -13,7 +13,7 @@ function installSourceMapSupport() {
   ;(process as any).setSourceMapsEnabled(true)
 }
 
-type COMPILE = (
+type CompileFn = (
   code: string,
   filename: string,
   format?: 'cjs' | 'esm',
@@ -25,7 +25,7 @@ type COMPILE = (
  *
  * As per https://github.com/standard-things/esm/issues/868#issuecomment-594480715
  */
-function patchCommonJsLoader(compile: COMPILE) {
+function patchCommonJsLoader(compile: CompileFn) {
   // @ts-expect-error
   const extensions = Module._extensions
   const jsHandler = extensions['.js']
@@ -80,26 +80,20 @@ interface RegisterOptions extends TransformOptions {
   hookMatcher?(fileName: string): boolean
 }
 
+const importMetaBanner = `const ${IMPORT_META_URL_VARIABLE_NAME} = require('url').pathToFileURL(__filename).href;`
+
 export function register(esbuildOptions: RegisterOptions = {}): Disposable {
   const {
     extensions = DEFAULT_EXTENSIONS,
     hookIgnoreNodeModules = true,
     hookMatcher,
-    ...overrides
+    ...rest
   } = esbuildOptions
 
-  const compile: COMPILE = function compile(code, filename, format) {
-    const define = {
-      'import.meta.url': IMPORT_META_URL_VARIABLE_NAME,
-      ...overrides.define,
-    }
-    const banner = `const ${IMPORT_META_URL_VARIABLE_NAME} = require('url').pathToFileURL(__filename).href;${
-      overrides.banner || ''
-    }`
-
+  const compile: CompileFn = function compile(code, filename, format) {
     // For some reason if the code is already compiled by esbuild-register
     // just return it as is
-    if (code.includes(banner)) {
+    if (code.includes(importMetaBanner)) {
       return code
     }
 
@@ -107,14 +101,23 @@ export function register(esbuildOptions: RegisterOptions = {}): Disposable {
     const compilerOptions = getOptions(dir)
     format = format ?? inferPackageFormat(dir, filename)
 
+    const { banner, ...overrides } = rest
+    const esbuildOptions = getEsbuildOptions(dir)
+    if (esbuildOptions != null) {
+      Object.assign(overrides, esbuildOptions)
+    }
+
     const result = transformSync(code, {
       sourcefile: filename,
       loader: getLoader(filename),
       sourcemap: 'both',
       tsconfigRaw: { compilerOptions },
       format,
-      define,
-      banner,
+      define: {
+        'import.meta.url': IMPORT_META_URL_VARIABLE_NAME,
+        ...overrides.define,
+      },
+      banner: importMetaBanner + (banner || ''),
       ...overrides,
     })
 
@@ -123,7 +126,7 @@ export function register(esbuildOptions: RegisterOptions = {}): Disposable {
     debug('%s', js)
 
     const warnings = result.warnings
-    if (warnings && warnings.length > 0) {
+    if (warnings?.length) {
       for (const warning of warnings) {
         console.log(warning.location)
         console.log(warning.text)
@@ -151,5 +154,3 @@ export function register(esbuildOptions: RegisterOptions = {}): Disposable {
     },
   }
 }
-
-export type Register = ReturnType<typeof register>

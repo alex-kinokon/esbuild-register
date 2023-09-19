@@ -1,5 +1,5 @@
 import { findConfig } from './findConfig'
-import type { CommonOptions } from 'esbuild'
+import type { CommonOptions, TransformOptions } from 'esbuild'
 
 type EsbuildCompilerOptions = NonNullable<
   Exclude<CommonOptions['tsconfigRaw'], string | undefined>['compilerOptions']
@@ -15,10 +15,10 @@ export const getOptions = (cwd: string): EsbuildCompilerOptions => {
   return {}
 }
 
-export const inferPackageFormat = (
+export function inferPackageFormat(
   cwd: string,
   filename: string,
-): 'esm' | 'cjs' => {
+): 'esm' | 'cjs' {
   if (filename.endsWith('.mjs')) {
     return 'esm'
   }
@@ -27,4 +27,9 @@ export const inferPackageFormat = (
   }
   const { data } = findConfig(['package.json'], cwd)
   return data?.type === 'module' && /\.m?js$/.test(filename) ? 'esm' : 'cjs'
+}
+
+export function getEsbuildOptions(cwd: string): TransformOptions | undefined {
+  const { data } = findConfig(['package.json'], cwd)
+  return data?.esbuild
 }
