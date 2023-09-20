@@ -9,8 +9,8 @@ spawnSync(
     (0, require.resolve)('../register.js'),
     '--require',
     (0, require.resolve)('./prepare.js'),
-    '--loader',
-    (0, require.resolve)('../loader.js'),
+    // '--loader',
+    // (0, require.resolve)('../loader.js'),
     ...args,
   ],
   {

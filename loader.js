@@ -1,1 +1,3 @@
-module.exports = require('./dist/loader.js')
+import { register } from 'node:module'
+
+register('./dist/loader.js', import.meta.url)
